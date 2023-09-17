@@ -8,7 +8,10 @@ Strings = {
     ['locked'] = 'pojazd jest zamkniety',
     ['engine_started'] = 'uruchomiono silnik',
     ['lockpick_broken'] = 'zniszczył ci sie wytrych',
+    ['opened'] = 'Ten pojazd jest już otwarty.',
 }
+
+local vehicleOpen = {}
 
 RegisterNetEvent('fun-picklock:lockpick:start', function()
     local playerPed = PlayerPedId()
@@ -19,43 +22,49 @@ RegisterNetEvent('fun-picklock:lockpick:start', function()
 
     if DoesEntityExist(vehicle) then
         if GetVehicleDoorLockStatus(vehicle) > 2 or pedInVehicleSeat then
-            while not HasAnimDictLoaded("anim@amb@clubhouse@tutorial@bkr_tut_ig3@") do
-                Citizen.Wait(0)
-                RequestAnimDict("anim@amb@clubhouse@tutorial@bkr_tut_ig3@")
-            end
-
-            TaskPlayAnim(playerPed, "anim@amb@clubhouse@tutorial@bkr_tut_ig3@", "machinic_loop_mechandplayer", 3.5, 1.0, -1, 11, 0.0, 0, 0, 0)
-            local veh = GetVehiclePedIsTryingToEnter(playerPed)
-
-            local finished = exports["taskbarskill"]:taskBar(3700, 3)
-            Citizen.CreateThread(function()
-                Citizen.Wait(100)
-                if finished == 100 then
-                    if GetVehicleDoorLockStatus(vehicle) > 2 then
-                        ClearPedTasksImmediately(playerPed)
-                        SetVehicleDoorsLocked(vehicle, 1)
-                        SetVehicleDoorsLockedForAllPlayers(vehicle, false)
-                        SetVehicleEngineOn(vehicle, true, false, false)
-                        ESX.ShowNotification(Strings['unlocked'])
-                    elseif pedInVehicleSeat then
-                        ClearPedTasksImmediately(playerPed)
-                        SetVehicleDoorsLocked(vehicle, 0)
-                        SetVehicleDoorsLockedForAllPlayers(vehicle, false)
-                        TaskLeaveVehicle(pedInVehicleSeat, vehicle, 4160)
-                        ESX.ShowNotification(Strings['unlocked'])
-                    end
-                else
-                    SetVehicleAlarm(vehicle, true)
-                    StartVehicleAlarm(vehicle)
-                    ClearPedTasksImmediately(playerPed)
-                    ESX.ShowNotification(Strings['alarm'])
-                    local random = math.random(1, 10)
-                    if random <= 3 then
-                        ESX.ShowNotification(Strings['lockpick_broken'])
-                        TriggerServerEvent('fun-lockpick:remove')
-                    end
+            if not vehicleOpen[vehicle] then
+                while not HasAnimDictLoaded("anim@amb@clubhouse@tutorial@bkr_tut_ig3@") do
+                    Citizen.Wait(0)
+                    RequestAnimDict("anim@amb@clubhouse@tutorial@bkr_tut_ig3@")
                 end
-            end)
+
+                TaskPlayAnim(playerPed, "anim@amb@clubhouse@tutorial@bkr_tut_ig3@", "machinic_loop_mechandplayer", 3.5, 1.0, -1, 11, 0.0, 0, 0, 0)
+                local veh = GetVehiclePedIsTryingToEnter(playerPed)
+
+                local finished = exports["taskbarskill"]:taskBar(3700, 3)
+                Citizen.CreateThread(function()
+                    Citizen.Wait(100)
+                    if finished == 100 then
+                        if GetVehicleDoorLockStatus(vehicle) > 2 then
+                            ClearPedTasksImmediately(playerPed)
+                            SetVehicleDoorsLocked(vehicle, 1)
+                            SetVehicleDoorsLockedForAllPlayers(vehicle, false)
+                            SetVehicleEngineOn(vehicle, true, false, false)
+                            ESX.ShowNotification(Strings['unlocked'])
+                            vehicleOpen[vehicle] = true
+                        elseif pedInVehicleSeat then
+                            ClearPedTasksImmediately(playerPed)
+                            SetVehicleDoorsLocked(vehicle, 0)
+                            SetVehicleDoorsLockedForAllPlayers(vehicle, false)
+                            TaskLeaveVehicle(pedInVehicleSeat, vehicle, 4160)
+                            ESX.ShowNotification(Strings['unlocked'])
+                            vehicleOpen[vehicle] = true
+                        end
+                    else
+                        SetVehicleAlarm(vehicle, true)
+                        StartVehicleAlarm(vehicle)
+                        ClearPedTasksImmediately(playerPed)
+                        ESX.ShowNotification(Strings['alarm'])
+                        local random = math.random(1, 10)
+                        if random <= 3 then
+                            ESX.ShowNotification(Strings['lockpick_broken'])
+                            TriggerServerEvent('fun-lockpick:remove')
+                        end
+                    end
+                end)
+            else
+                ESX.ShowNotification(Strings['opened'])
+            end
         else
             ESX.ShowNotification(Strings['locked'])
         end
